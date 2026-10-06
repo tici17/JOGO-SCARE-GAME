@@ -1,0 +1,192 @@
+ SCARE GAME
+ 
+ 
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SquareGame - HTML5 Canvas</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        h1 {
+            margin-bottom: 10px;
+        }
+        #gameCanvas {
+            border: 3px solid #333;
+            background-color: #141414;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+        }
+    </style>
+</head>
+<body>
+ 
+    <h1>SquareGame (Versão Web)</h1>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+ 
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+ 
+        // Estados do Jogo
+        let estadoJogo = "MENU"; // "MENU", "JOGANDO", "GAMEOVER"
+ 
+        // Jogador
+        const jogador = {
+            x: 380,
+            y: 280,
+            tamanho: 40,
+            velocidade: 5
+        };
+ 
+        // Inimigo
+        const inimigo = {
+            x: 50,
+            y: 50,
+            tamanho: 40,
+            velocidadeBase: 2.5,
+            velocidade: 2.5
+        };
+ 
+        // Pontuação
+        let pontuacao = 0;
+        let recorde = 0;
+        let tempoInicio = 0;
+ 
+        // Controle de Teclas Presas
+        const teclas = {};
+ 
+        window.addEventListener("keydown", (e) => {
+            teclas[e.code] = true;
+ 
+            if (e.code === "Space") {
+                if (estadoJogo === "MENU" || estadoJogo === "GAMEOVER") {
+                    reiniciarJogo();
+                    estadoJogo = "JOGANDO";
+                }
+            }
+        });
+ 
+        window.addEventListener("keyup", (e) => {
+            teclas[e.code] = false;
+        });
+ 
+        function reiniciarJogo() {
+            jogador.x = canvas.width / 2 - jogador.tamanho / 2;
+            jogador.y = canvas.height / 2 - jogador.tamanho / 2;
+            inimigo.x = 50;
+            inimigo.y = 50;
+            inimigo.velocidade = inimigo.velocidadeBase;
+            pontuacao = 0;
+            tempoInicio = Date.now();
+        }
+ 
+        function atualizar() {
+            if (estadoJogo !== "JOGANDO") return;
+ 
+            // 1. Movimento do Jogador
+            if ((teclas["ArrowLeft"] || teclas["KeyA"]) && jogador.x > 0) {
+                jogador.x -= jogador.velocidade;
+            }
+            if ((teclas["ArrowRight"] || teclas["KeyD"]) && jogador.x < canvas.width - jogador.tamanho) {
+                jogador.x += jogador.velocidade;
+            }
+            if ((teclas["ArrowUp"] || teclas["KeyW"]) && jogador.y > 0) {
+                jogador.y -= jogador.velocidade;
+            }
+            if ((teclas["ArrowDown"] || teclas["KeyS"]) && jogador.y < canvas.height - jogador.tamanho) {
+                jogador.y += jogador.velocidade;
+            }
+ 
+            // 2. Movimento do Inimigo (Perseguição)
+            if (inimigo.x < jogador.x) inimigo.x += inimigo.velocidade;
+            else if (inimigo.x > jogador.x) inimigo.x -= inimigo.velocidade;
+ 
+            if (inimigo.y < jogador.y) inimigo.y += inimigo.velocidade;
+            else if (inimigo.y > jogador.y) inimigo.y -= inimigo.velocidade;
+ 
+            // 3. Pontuação e Dificuldade
+            pontuacao = Math.floor((Date.now() - tempoInicio) / 1000);
+            inimigo.velocidade = inimigo.velocidadeBase + Math.floor(pontuacao / 5) * 0.3;
+ 
+            // 4. Detecção de Colisão
+            if (
+                jogador.x < inimigo.x + inimigo.tamanho &&
+                jogador.x + jogador.tamanho > inimigo.x &&
+                jogador.y < inimigo.y + inimigo.tamanho &&
+                jogador.y + jogador.tamanho > inimigo.y
+            ) {
+                if (pontuacao > recorde) recorde = pontuacao;
+                estadoJogo = "GAMEOVER";
+            }
+        }
+ 
+        function desenharTextoCentralizado(texto, tamanho, cor, y) {
+            ctx.fillStyle = cor;
+            ctx.font = `bold ${tamanho}px Arial`;
+            ctx.textAlign = "center";
+            ctx.fillText(texto, canvas.width / 2, y);
+        }
+ 
+        function desenhar() {
+            // Limpa a Tela
+            ctx.fillStyle = "#141414";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+ 
+            if (estadoJogo === "MENU") {
+                desenharTextoCentralizado("SQUARE GAME", 48, "#0078FF", 200);
+                desenharTextoCentralizado("Esquive do quadrado vermelho!", 24, "#FFFFFF", 280);
+                desenharTextoCentralizado("Pressione ESPAÇO para Jogar", 24, "#32CD32", 400);
+                desenharTextoCentralizado("Controles: Setas / WASD", 18, "#888888", 480);
+            }
+            else if (estadoJogo === "JOGANDO") {
+                // Desenha Jogador (Azul)
+                ctx.fillStyle = "#0078FF";
+                ctx.fillRect(jogador.x, jogador.y, jogador.tamanho, jogador.tamanho);
+ 
+                // Desenha Inimigo (Vermelho)
+                ctx.fillStyle = "#FF3232";
+                ctx.fillRect(inimigo.x, inimigo.y, inimigo.tamanho, inimigo.tamanho);
+ 
+                // HUD
+                ctx.fillStyle = "#FFFFFF";
+                ctx.font = "20px Arial";
+                ctx.textAlign = "left";
+                ctx.fillText(`Pontuação: ${pontuacao}s`, 20, 40);
+ 
+                ctx.textAlign = "right";
+                ctx.fillText(`Recorde: ${recorde}s`, canvas.width - 20, 40);
+            }
+            else if (estadoJogo === "GAMEOVER") {
+                desenharTextoCentralizado("GAME OVER", 48, "#FF3232", 180);
+                desenharTextoCentralizado(`Sua Pontuação: ${pontuacao} segundos`, 24, "#FFFFFF", 260);
+                desenharTextoCentralizado(`Recorde Atual: ${recorde} segundos`, 24, "#FFFFFF", 310);
+                desenharTextoCentralizado("Pressione ESPAÇO para Jogar Novamente", 24, "#32CD32", 420);
+            }
+        }
+ 
+        function loopJogo() {
+            atualizar();
+            desenhar();
+            requestAnimationFrame(loopJogo);
+        }
+ 
+        requestAnimationFrame(loopJogo);
+    </script>
+</body>
+</html>
+ 
